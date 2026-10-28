@@ -109,6 +109,7 @@ public class App {
         return values;
     }
 
+    // ★変更: 画面のHTML/CSSを、明るく見やすいカード型デザインに変更
     static String makeHtml() {
         int remaining = 0;
         int remainingCost = 0;
@@ -124,10 +125,14 @@ public class App {
         html.append("<!DOCTYPE html><html lang='ja'><head><meta charset='UTF-8'>")
             .append("<meta name='viewport' content='width=device-width,initial-scale=1'>")
             .append("<title>買い物リスト</title><style>")
-            .append("body{font-family:sans-serif;background:#f4f7fb;max-width:700px;margin:32px auto;padding:0 16px;color:#222}")
-            .append("h1{color:#234} .panel{background:white;border-radius:12px;padding:18px;margin:14px 0;box-shadow:0 2px 8px #ddd}")
-            .append("input,select,button{padding:9px;margin:3px} button{cursor:pointer}li{padding:10px 0;border-bottom:1px solid #eee}")
-            .append("form.inline{display:inline} .done{color:#888;text-decoration:line-through} .muted{color:#666;font-size:14px}")
+            // ★変更: ミントグリーンと水色の背景、カード、丸い部品、ホバー効果、レスポンシブ対応
+            .append(":root{--mint:#dff8ee;--sky:#dff3ff;--green:#38c982;--green-dark:#20a968;--red:#ffe1e1;--ink:#24424b;--muted:#6c858b}")
+            .append("*{box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans JP',sans-serif;background:linear-gradient(135deg,var(--mint),var(--sky));max-width:820px;margin:0 auto;padding:32px 16px;color:var(--ink);min-height:100vh}")
+            .append("h1{color:var(--ink);text-align:center;font-size:clamp(28px,6vw,44px);margin:12px 0 24px}h2{color:var(--ink);margin-top:0} .panel{background:rgba(255,255,255,.92);border:1px solid rgba(255,255,255,.8);border-radius:24px;padding:24px;margin:16px 0;box-shadow:0 12px 30px rgba(72,137,148,.14)}")
+            .append("input,select,button{padding:11px 13px;margin:4px;border-radius:12px;font-size:15px}input,select{border:2px solid #d7edf0;background:#fff;color:var(--ink)}input:focus,select:focus{outline:none;border-color:#73d8c1;box-shadow:0 0 0 4px rgba(115,216,193,.18)}button{cursor:pointer;border:0;background:#e8f7ff;color:#267088;font-weight:700;transition:transform .2s,box-shadow .2s,background .2s}button:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(36,66,75,.16)}")
+            .append("li{display:flex;align-items:center;gap:10px;padding:16px;margin:10px 0;border:1px solid #e1f0f0;border-radius:16px;background:#fff;box-shadow:0 4px 12px rgba(72,137,148,.08);list-style-position:inside}li form{margin-left:auto}li form:last-child button{background:var(--red);color:#b84f5d}.panel>p:first-of-type{padding:16px;border-radius:16px;background:#f5fffb;font-size:18px;line-height:1.8}.panel>p:first-of-type strong{color:#168b68;font-size:25px}")
+            .append("form.inline{display:inline}.done{color:#9aaeb2;text-decoration:line-through}.muted{color:var(--muted);font-size:14px}a{color:#267da0}.panel>ol{padding-left:0}.panel>form:last-of-type button{background:#fff0f0;color:#b84f5d}")
+            .append("@media(max-width:600px){body{padding:20px 10px}.panel{padding:18px;border-radius:18px}input,select{width:calc(50% - 12px)}input[name='name']{width:100%}li{flex-wrap:wrap}li form{margin-left:0}.panel>p:first-of-type{font-size:15px}}")
             .append("</style></head><body><h1>🛒 買い物リスト</h1>")
             .append("<div class='panel'><h2>商品を追加</h2><form action='/add' method='post'>")
             .append("<input name='name' placeholder='商品名（例：牛乳）' required>")
