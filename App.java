@@ -38,11 +38,8 @@ public class App { // クラス名は App です。
     static int nextId = 1; // 次に振る番号です。★変更
 
     public static void main(String[] args) throws Exception { // プログラムの開始位置です。
+        load(); // 起動時にtodos.csvからTodoを読み込みます。
         HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0); // 8080番ポートでサーバーを用意します。
-        todos.add(new Todo(nextId++, "牛乳を買う")); // サンプルのTodoを追加します。★変更
-        Todo egg = new Todo(nextId++, "卵を買う"); // 2件目のサンプルTodoを作ります。★変更
-        egg.setDone(true); // 卵を買うTodoを完了にします。★変更
-        todos.add(egg); // 2件目のサンプルTodoを追加します。★変更
         server.createContext("/", exchange -> { // "/" に来たときの処理をここに直接書きます。
             String path = exchange.getRequestURI().getPath(); // アクセスされたパスを取り出します。
             String method = exchange.getRequestMethod(); // GETやPOSTなどの方法を取り出します。
@@ -55,6 +52,8 @@ public class App { // クラス名は App です。
                 if (!title.isEmpty()) { // 入力が空でないときだけ追加します。★変更
                     todos.add(new Todo(nextId, title)); // Todoを一覧に追加します。★変更
                     nextId++; // 次に使う番号を進めます。★変更
+
+                    save(); // Todo追加後に全件を保存します。
                 } // 空でない入力の処理を終えます。
                 exchange.getResponseHeaders().set("Location", "/"); // 戻り先をトップページにします。
                 exchange.sendResponseHeaders(303, -1); // トップページへの移動を応答します。
@@ -62,6 +61,7 @@ public class App { // クラス名は App です。
                 return; // この追加処理を終えます。
             } else if (path.equals("/delete-completed") && method.equals("POST")) { // 完了済み一括削除のPOSTを受け取ります。★変更
                 todos.removeIf(todo -> todo.isDone()); // 完了済みのTodoだけを一覧から削除します。★変更
+                save(); // 完了済みTodoの削除後に全件を保存します。
                 exchange.getResponseHeaders().set("Location", "/"); // 削除後の戻り先を一覧画面にします。★変更
                 exchange.sendResponseHeaders(303, -1); // 一覧画面への移動を応答します。★変更
                 exchange.close(); // 応答を閉じます。★変更
@@ -74,6 +74,8 @@ public class App { // クラス名は App です。
                         for (Todo todo : todos) { // ★追加 Todoを1件ずつ確認します。
                             if (todo.getId() == id) { // ★追加 idが一致するか確かめます。
                                 todo.setDone(true); // ★追加 Todoを完了にします。
+
+                                save(); // Todo完了後に全件を保存します。
                                 break; // ★追加 一致したTodoの確認を終えます。
                             } // ★追加 idの一致確認を終えます。
                         } // ★追加 Todoの確認を終えます。
@@ -90,6 +92,8 @@ public class App { // クラス名は App です。
                     try { // ★追加 idを数値に変換します。
                         int id = Integer.parseInt(query.substring(3)); // ★追加 idを数値にします。
                         todos.removeIf(todo -> todo.getId() == id); // ★追加 idが一致するTodoを削除します。
+
+                        save(); // Todo削除後に全件を保存します。
                     } catch (NumberFormatException e) { // ★追加 数字でないidは何も変更しません。
                     } // ★追加 idの数値変換を終えます。
                 } // ★追加 idの有無の確認を終えます。
@@ -122,7 +126,8 @@ public class App { // クラス名は App です。
                         if (todo.isDone()) { // Todoが完了済みか確かめます。★変更
                             mark = "【●】"; // 完了済みの印を付けます。★変更
                         } // 完了状態の確認を終えます。★変更
-                        html += "<li>" + displayNumber + ". " + todo.getTitle() + mark + " <a href='/done?id=" + todo.getId()
+                        html += "<li>" + displayNumber + ". " + todo.getTitle() + mark + " <a href='/done?id="
+                                + todo.getId()
                                 + "'>完了</a> <a href='/delete?id=" + todo.getId() + "'>削除</a></li>"; // ★追加
                                                                                                     // id付きの完了・削除リンクを項目に追加します。
                         displayNumber++; // 次のTodoの番号を1つ進めます。★変更
@@ -145,4 +150,42 @@ public class App { // クラス名は App です。
         server.start(); // サーバーを起動します。
         System.out.println("サーバー起動: http://localhost:8080 （止めるときは Ctrl+C）"); // 起動メッセージを表示します。
     } // main メソッドの終わりです。
+
+    static void save() { // Todo全件をUTF-8のCSVへ保存します。
+        List<String> lines = new ArrayList<>(); // CSVへ書き出す行を準備します。
+        for (Todo todo : todos) { // Todoを1件ずつCSV行へ変換します。
+            lines.add(todo.getId() + "," + (todo.isDone() ? "1" : "0") + "," + todo.getTitle()); // id、完了状態、タイトルを書き出します。
+        }
+        try { // ファイル保存時の入出力例外を扱います。
+            java.nio.file.Files.write(java.nio.file.Path.of("todos.csv"), lines, StandardCharsets.UTF_8); // UTF-8で全件を保存します。
+        } catch (java.io.IOException e) {
+            throw new RuntimeException(e); // 保存に失敗したことを通知します。
+        }
+    }
+
+    static void load() { // todos.csvのTodoを一覧へ読み込みます。
+        java.nio.file.Path path = java.nio.file.Path.of("todos.csv"); // 保存ファイルの場所を指定します。
+        if (!java.nio.file.Files.exists(path)) { // 保存ファイルが無ければ空のまま起動します。
+            return; // 読み込み処理を終了します。
+        }
+        int maxId = 0; // 読み込んだ最大idを記録します。
+        try { // ファイル読み込み時の入出力例外を扱います。
+            for (String line : java.nio.file.Files.readAllLines(path, StandardCharsets.UTF_8)) { // CSVをUTF-8で1行ずつ読み込みます。
+                String[] fields = line.split(",", 3); // id、done、titleの3項目に分割します。
+                if (fields.length != 3) { // 不正な行は読み飛ばします。
+                    continue; // 次の行へ進みます。
+                }
+                int id = Integer.parseInt(fields[0].trim()); // idを読み込みます。
+                Todo todo = new Todo(id, fields[2]); // 読み込んだタイトルでTodoを作ります。
+                todo.setDone(fields[1].trim().equals("1")); // doneが1なら完了済みにします。
+                todos.add(todo); // Todoを一覧へ戻します。
+                if (id > maxId) { // 最大idを更新します。
+                    maxId = id; // 最大idを記録します。
+                }
+            }
+            nextId = maxId + 1; // 最大idの次の番号を次回のidにします。
+        } catch (java.io.IOException e) {
+            throw new RuntimeException(e); // 読み込みに失敗したことを通知します。
+        }
+    }
 } // App クラスの終わりです。
